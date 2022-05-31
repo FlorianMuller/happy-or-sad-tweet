@@ -1,0 +1,3 @@
+python-dotenv==0.17.1
+tweepy==4.10.0
+kafka-python==2.0.2

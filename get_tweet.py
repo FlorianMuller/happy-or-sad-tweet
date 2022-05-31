@@ -4,14 +4,11 @@ from dotenv import load_dotenv
 import tweepy
 from kafka import KafkaProducer
 
-# take environment variables from .env.
+# take environment variables from .env
 load_dotenv()
 
-KEYWORD="ukraine"
-
-KAFKA_URL = "localhost"
-KAFKA_BROKERS = [f"{KAFKA_URL}:9092", f"{KAFKA_URL}:9093", f"{KAFKA_URL}:9094"]
-TOPIC = f"{KEYWORD}_tweet"
+KAFKA_BROKERS = os.environ["KAFKA_BROKERS"].split(",")
+TOPIC = f"{os.environ['TWITTER_KEYWORD']}_tweet"
 
 
 def define_twitter_callbacks(twitter_stream, on_tweet_fn):
@@ -23,7 +20,7 @@ def define_twitter_callbacks(twitter_stream, on_tweet_fn):
 
 
 def define_twitter_rules(twitter_stream):
-    twitter_stream.add_rules(tweepy.StreamRule(KEYWORD))
+    twitter_stream.add_rules(tweepy.StreamRule(os.environ["TWITTER_KEYWORD"]))
     twitter_stream.add_rules(tweepy.StreamRule("lang:en"))
     twitter_stream.add_rules(tweepy.StreamRule("-is:retweet"))
 
