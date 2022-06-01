@@ -1,4 +1,8 @@
 # Happy or Sad tweet ?
 that is the question
 
-blabla
+## Start project
+Install dependecies
+```bash
+pip install -r requirements.txt
+```

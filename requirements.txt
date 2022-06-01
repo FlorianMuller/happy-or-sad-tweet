@@ -1,0 +1,5 @@
+python-dotenv==0.17.1
+tweepy==4.10.0
+kafka-python==2.0.2
+vaderSentiment==3.3.2
+hdfs==2.7.0
