@@ -34,7 +34,7 @@ def main():
     
     # Callbacks
     def send_tweet(tweet):
-        print(tweet.data)
+        print(json.dumps(tweet.data, indent=4, sort_keys=True))
         print("~~~~~~~~~~~~~~~~")
 
         producer.send(TOPIC, tweet.data)
@@ -48,7 +48,9 @@ def main():
         # Start streaming tweet
         twitter_stream.filter()
     except KeyboardInterrupt:
-        producer.flush()
+        producer.flush(
+            # tweet_fields=["id", "text", "created_at", "author_id", "attachments", "entities", "geo", "lang"]
+        )
 
 
 if __name__ == "__main__":
