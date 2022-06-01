@@ -1,5 +1,7 @@
 # Happy or Sad tweet ?
-that is the question
+
+## Architecture du projet
+![Architecture diagram](image/Architecture.png)
 
 ## Start project
 Install dependecies
