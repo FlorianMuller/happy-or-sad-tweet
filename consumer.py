@@ -42,12 +42,11 @@ if file_name not in client.list("/data"):
     with client.write("/data/"+file_name):
         pass
 
+print("listening...")
 for message in consumer:
+    tweet = message.value
+    print(tweet)
+    tweet["details"], tweet["overall_feeling"] = sentiment_scores(tweet['text'])
+
     with client.write("/data/"+file_name , append=True) as f:
-        tweet = message.value
-        print(tweet)
-        tweet_text = tweet['text']
-
-        tweet["details"], tweet["overall_feeling"] = sentiment_scores(tweet_text)
-
         f.write((json.dumps(tweet) + "\n").encode('utf-8'))
