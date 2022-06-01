@@ -18,10 +18,32 @@ def define_twitter_callbacks(twitter_stream, on_tweet_fn):
     twitter_stream.on_error = lambda error: print("error", error)
 
 
-def define_twitter_rules(twitter_stream):
-    twitter_stream.add_rules(tweepy.StreamRule(os.environ["TWITTER_KEYWORD"]))
-    twitter_stream.add_rules(tweepy.StreamRule("lang:en"))
-    twitter_stream.add_rules(tweepy.StreamRule("-is:retweet"))
+def reset_rules(twitter_stream):
+    current_rules = twitter_stream.get_rules().data or []
+    for rule in current_rules:
+        twitter_stream.delete_rules(rule.id)
+
+
+def define_twitter_rules(twitter_stream, wanted_rules):
+    missing_rules = wanted_rules.copy()
+    missing_rules_values = [rule.value for rule in missing_rules]
+
+    current_rules = twitter_stream.get_rules().data or []
+    for rule in current_rules:
+        if rule.value not in missing_rules_values:
+            # Removing unwatned rules
+            twitter_stream.delete_rules(rule.id)
+        else:
+            # Removing good rule from missing rules
+            idx = missing_rules_values.index(rule.value)
+            del missing_rules_values[idx]
+            del missing_rules[idx]
+    
+    # Adding missing rules
+    for wrule in missing_rules:
+        twitter_stream.add_rules(wrule)
+
+
 
 
 def main():
@@ -41,15 +63,21 @@ def main():
     define_twitter_callbacks(twitter_stream, send_tweet)
 
     # Twitter stream rules
-    define_twitter_rules(twitter_stream)
-    
+    define_twitter_rules(twitter_stream, [
+        tweepy.StreamRule(f"{os.environ['TWITTER_KEYWORD']} lang:en -is:retweet")
+    ])
+
+    print("Streaming with rules:")
+    for rule in twitter_stream.get_rules().data:
+        print('-', rule)
+
     try:
         # Start streaming tweet
-        twitter_stream.filter()
-    except KeyboardInterrupt:
-        producer.flush(
-            # tweet_fields=["id", "text", "created_at", "author_id", "attachments", "entities", "geo", "lang"]
+        twitter_stream.filter(
+            tweet_fields=["id", "text", "created_at", "author_id", "attachments", "entities", "geo", "lang"]
         )
+    except KeyboardInterrupt:
+        producer.flush()
 
 
 if __name__ == "__main__":
