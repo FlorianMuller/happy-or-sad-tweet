@@ -6,7 +6,6 @@ from kafka import KafkaProducer
 
 # take environment variables from .env
 load_dotenv()
-
 KAFKA_BROKERS = os.environ["KAFKA_BROKERS"].split(",")
 TOPIC = f"{os.environ['TWITTER_KEYWORD']}_tweet"
 
@@ -29,7 +28,7 @@ def main():
     twitter_stream = tweepy.StreamingClient(os.environ["TWITTER_BEARER_TOKEN"])
     producer = KafkaProducer(
         bootstrap_servers=KAFKA_BROKERS,
-        value_serializer=lambda m: json.dumps(m).encode('ascii')
+        value_serializer=lambda m: json.dumps(m).encode('utf-8')
     )
     
     # Callbacks

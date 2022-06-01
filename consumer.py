@@ -1,14 +1,14 @@
+import os
+import json
+from dotenv import load_dotenv
 from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
 from kafka import KafkaConsumer
 import hdfs
 
-client = hdfs.InsecureClient("http://192.168.49.1:50070")
-
-consumer = KafkaConsumer(
-    'data',
-    bootstrap_servers=['localhost:9092', 'localhost:9093', 'localhost:9094'],
-    group_id='users-group'
-)
+# take environment variables from .env
+load_dotenv()
+KAFKA_BROKERS = os.environ["KAFKA_BROKERS"].split(",")
+TOPIC = f"{os.environ['TWITTER_KEYWORD']}_tweet"
 
 def sentiment_scores(sentence):
     # Create a SentimentIntensityAnalyzer object.
@@ -25,10 +25,22 @@ def sentiment_scores(sentence):
         
     return sentiment_dict, feeling
 
+
+
+client = hdfs.InsecureClient(os.environ["HDFS_URL"])
+
+consumer = KafkaConsumer(
+    TOPIC,
+    bootstrap_servers=KAFKA_BROKERS,
+    group_id='users-group',
+    value_deserializer=lambda m: json.loads(m.decode('utf-8'))
+)
+
 for message in consumer:
     with client.write("/tweets.csv", append=True) as f:
-        reponse = message.value.decode()
-        details, overall_feeling = sentiment_scores(reponse)
-        data = reponse + ',' + str(overall_feeling) + ',' + str(details) + '\n'
-        print(data)
-        f.write(data.encode('utf-8'))
+        tweet = message.value
+        tweet_text = tweet.text
+
+        tweet["details"], tweet["overall_feeling"] = sentiment_scores(tweet_text)
+
+        f.write((json.dumps(tweet) + "\n").encode('utf-8'))
