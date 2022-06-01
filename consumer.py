@@ -36,10 +36,17 @@ consumer = KafkaConsumer(
     value_deserializer=lambda m: json.loads(m.decode('utf-8'))
 )
 
+#Creation du fichier s'il n'existe pas
+file_name = "tweets.json"
+if file_name not in client.list("/data"):
+    with client.write("/data/"+file_name):
+        pass
+
 for message in consumer:
-    with client.write("/tweets.csv", append=True) as f:
+    with client.write("/data/"+file_name , append=True) as f:
         tweet = message.value
-        tweet_text = tweet.text
+        print(tweet)
+        tweet_text = tweet['text']
 
         tweet["details"], tweet["overall_feeling"] = sentiment_scores(tweet_text)
 
