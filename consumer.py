@@ -1,5 +1,8 @@
 from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
 from kafka import KafkaConsumer
+import hdfs
+
+client = hdfs.InsecureClient("http://192.168.49.1:50070")
 
 consumer = KafkaConsumer(
     'data',
@@ -23,7 +26,9 @@ def sentiment_scores(sentence):
     return sentiment_dict, feeling
 
 for message in consumer:
-    reponse = message.value.decode()
-    details, overall_feeling = sentiment_scores(reponse)
-    data = {'TOPIC': reponse, 'OVERALL FEELING': overall_feeling, 'DETAILS': details}
-    print(data)
+    with client.write("/tweets.csv", append=True) as f:
+        reponse = message.value.decode()
+        details, overall_feeling = sentiment_scores(reponse)
+        data = reponse + ',' + str(overall_feeling) + ',' + str(details) + '\n'
+        print(data)
+        f.write(data.encode('utf-8'))
