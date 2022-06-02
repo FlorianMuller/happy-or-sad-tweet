@@ -3,3 +3,5 @@ tweepy==4.10.0
 kafka-python==2.0.2
 vaderSentiment==3.3.2
 hdfs==2.7.0
+pyspark==3.2.1
+streamlit==1.9.2
