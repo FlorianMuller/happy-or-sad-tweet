@@ -86,8 +86,6 @@ def page_evolution_temporelle(state):
     st.pyplot(fig)
 
 
-
-
 def page_tfidf(state):
     st.title("MOTS CLES (TF-IDF)")
     df = get_json_from_dfs("/data/tweets.json")
@@ -116,7 +114,10 @@ def page_tfidf(state):
             .toPandas(),    
         width=500)
 
-
+    # method
+    with st.expander("What's TF-IDF ?"):
+        st.markdown("tf–idf, short for \"term frequency–inverse document frequency\", is a numerical statistic that is intended to reflect how important a word is to a document in a collection or corpus")
+        st.image("https://www.seoquantum.com/sites/default/files/tf-idf-2-1-1024x375.png")
 
 
 def page_feed(state):
