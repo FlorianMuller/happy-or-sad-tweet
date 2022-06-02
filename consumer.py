@@ -42,7 +42,7 @@ if file_name not in client.list("/data"):
     with client.write("/data/"+file_name):
         pass
 
-print("listening...")
+print(f"listening on \"{TOPIC}\"...")
 for message in consumer:
     tweet = message.value
     print(tweet)

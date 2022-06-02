@@ -1,5 +1,7 @@
 import os
+import time
 from pyspark.sql import SparkSession
+import pyspark.sql.functions as f
 from dotenv import load_dotenv
 import streamlit as st
 import matplotlib.pyplot as plt 
@@ -13,7 +15,7 @@ spark = SparkSession.builder \
     .appName("dashboard") \
     .getOrCreate()
 
-# # Read JSON file into dataframe    
+# # Read JSON file into dataframe
 df = spark.read.json("hdfs://localhost:54310/data/tweets.json")
 df.createOrReplaceTempView("Tweets")
 general_df = spark.sql("SELECT text , overall_feeling FROM Tweets")
@@ -22,6 +24,9 @@ pd_general_df = general_df.toPandas()
 
 grouped_df = spark.sql("SELECT overall_feeling, COUNT(id) as count FROM Tweets GROUP BY overall_feeling")
 pd_grouped_df = grouped_df.toPandas()
+
+def get_json_from_dfs(file_path):
+    return spark.read.json(f"hdfs://localhost:54310{file_path}")
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -58,13 +63,65 @@ def page_evolution_temporelle(state):
     st.title("EVOLUTION TEMPORELLE")
     st.write('comming soon')
 
+
+
+
 def page_tfidf(state):
     st.title("MOTS CLES (TF-IDF)")
-    st.write('comming soon')
+    df = get_json_from_dfs("/data/tweets.json")
+
+    # Splitting twwet in words
+    words = df \
+        .withColumn("word", f.explode(f.split("text", "\s+"))) \
+        .select("word", "overall_feeling") \
+        .filter(f.col("word").contains("http") == False)
+
+    word_tf = words.groupBy("overall_feeling", "word").agg(f.count("word").alias("term_frequency")).alias("tf")
+    word_df = words.distinct().groupBy("word").agg(f.count("overall_feeling").alias("document_frequency")).alias("df")
+    tf_idf = word_tf \
+        .join(word_df, word_tf.word == word_df.word, "left") \
+        .withColumn("tf_idf", f.col("term_frequency") * f.log(3 / f.col("document_frequency")))
+    
+    st.markdown("## Most representative words")
+
+    feelings = ["Positive", "Negative", "Neutral"]
+    for feel in feelings:
+        st.markdown(f"### For {feel.lower()} tweets")
+        st.dataframe(tf_idf \
+            .filter(tf_idf["overall_feeling"] == feel) \
+            .select("tf.word", "tf_idf", "term_frequency") \
+            .sort(f.col("tf_idf").desc()) \
+            .toPandas(),    
+        width=500)
+
+
+
 
 def page_feed(state):
     st.title("FEED TEMPS REEL")
-    st.write('comming soon')
+    # creating a single-element container.
+    placeholder = st.empty()
+    spark = SparkSession.builder.getOrCreate()
+
+    old_tweet_count = None
+    while True:
+        df = get_json_from_dfs("/data/tweets.json")
+
+        with placeholder.container():
+
+            # Tweet count
+            tweet_count = df.count()
+            st.metric("Number of tweets", tweet_count, tweet_count - (old_tweet_count or tweet_count))
+            old_tweet_count = tweet_count
+            
+            st.markdown("### Last tweet")
+            st.dataframe(df \
+                .sort(f.col("created_at").desc()) \
+                .select("text") \
+                .toPandas()
+            )
+
+        time.sleep(1)
 
 def page_equipe(state):
     st.title("LES BOSS")
