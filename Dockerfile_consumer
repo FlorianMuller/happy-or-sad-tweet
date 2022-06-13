@@ -1,0 +1,11 @@
+FROM python:3.9
+
+WORKDIR /home/user/pjt_final/happy-or-sad-tweet/
+
+COPY requirements.txt requirements.txt
+
+RUN pip3 install -r requirements.txt
+
+COPY . .
+
+CMD [ "python3","consumer.py"]

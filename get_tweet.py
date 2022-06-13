@@ -1,8 +1,15 @@
 import os
+import time
 import json
 from dotenv import load_dotenv
 import tweepy
 from kafka import KafkaProducer
+
+# Waiting for zookeeper and kafka to start (takes ~ 10 sec)
+time.sleep(20)
+
+# import logging
+# logging.basicConfig(level=logging.DEBUG)
 
 # take environment variables from .env
 load_dotenv()
@@ -50,7 +57,8 @@ def main():
     twitter_stream = tweepy.StreamingClient(os.environ["TWITTER_BEARER_TOKEN"])
     producer = KafkaProducer(
         bootstrap_servers=KAFKA_BROKERS,
-        value_serializer=lambda m: json.dumps(m).encode('utf-8')
+        value_serializer=lambda m: json.dumps(m).encode('utf-8'),
+        api_version=(0, 10, 1)
     )
     
     # Callbacks
