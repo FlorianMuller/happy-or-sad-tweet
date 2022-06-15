@@ -1,11 +1,5 @@
-version: '2'
+version: "2"
 services:
-
-  hadoop:
-    container_name: hadoop
-    image: apache/hadoop-runner:latest
-    ports:
-      - 50070:50070
 
   zookeeper:
     container_name: zookeeper
@@ -15,10 +9,12 @@ services:
       ZOOKEEPER_TICK_TIME: 2000
     ports:
       - 22181:2181
+    profiles: ["stream"]
   
   kafka_broker_0:
     container_name: kafka_broker_0
     image: confluentinc/cp-kafka:latest
+    profiles: ["stream"]
     depends_on:
       - zookeeper
     ports:
@@ -27,7 +23,7 @@ services:
     environment:
       KAFKA_BROKER_ID: 0
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka_broker_0:29092,PLAINTEXT_HOST://192.168.1.37:9092 #/!\ pas localhost
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka_broker_0:29092,PLAINTEXT_HOST://192.168.1.35:9092 #/!\ pas localhost
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
       KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
@@ -35,6 +31,7 @@ services:
   kafka_broker_1:
     container_name: kafka_broker_1
     image: confluentinc/cp-kafka:latest
+    profiles: ["stream"]
     depends_on:
       - zookeeper
     ports:
@@ -43,7 +40,7 @@ services:
     environment:
       KAFKA_BROKER_ID: 1
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka_broker_1:29093,PLAINTEXT_HOST://192.168.1.37:9093 #/!\ pas localhost
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka_broker_1:29093,PLAINTEXT_HOST://192.168.1.35:9093 #/!\ pas localhost
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
       KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
@@ -51,6 +48,7 @@ services:
   kafka_broker_2:
     container_name: kafka_broker_2
     image: confluentinc/cp-kafka:latest
+    profiles: ["stream"]
     depends_on:
       - zookeeper
     ports:
@@ -59,7 +57,7 @@ services:
     environment:
       KAFKA_BROKER_ID: 2
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka_broker_2:29094,PLAINTEXT_HOST://192.168.1.37:9094 #/!\ pas localhost
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka_broker_2:29094,PLAINTEXT_HOST://192.168.1.35:9094 #/!\ pas localhost
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
       KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
@@ -70,6 +68,7 @@ services:
         - kafka_broker_0
         - kafka_broker_1
         - kafka_broker_2
+    profiles: ["stream"]
     build:
       context: .
       dockerfile: Dockerfile_producer
@@ -80,7 +79,125 @@ services:
         - kafka_broker_0
         - kafka_broker_1
         - kafka_broker_2
-        - hadoop
+    profiles: ["stream"]
     build:
       context: .
       dockerfile: Dockerfile_consumer
+
+  mongo:
+    container_name: mongo
+    image: mongo
+    restart: always
+    profiles: ["db"]
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: example
+
+  mongo-express:
+    container_name: mongo-express
+    image: mongo-express
+    restart: always
+    profiles: ["db"]
+    ports:
+      - 8081:8081
+    environment:
+      ME_CONFIG_MONGODB_ADMINUSERNAME: root
+      ME_CONFIG_MONGODB_ADMINPASSWORD: example
+      ME_CONFIG_MONGODB_URL: mongodb://root:example@mongo:27017/
+
+  dashboard:
+    container_name: dashboard
+    profiles: ["dashboard"]
+    build:
+      context: .
+      dockerfile: Dockerfile_dashboard
+
+
+
+
+
+
+
+
+  ## TENTATIVE HADOOP-SPARK ##
+  # namenode:
+  #   image: uhopper/hadoop-namenode
+  #   hostname: namenode
+  #   container_name: namenode
+  #   domainname: hadoop
+  #   volumes:
+  #     - namenode-data:/hadoop/dfs/name
+  #   ports:
+  #     - "50070:50070"
+  #     - "8020:8020"
+  #   environment:
+  #     - CLUSTER_NAME=HAPPY-TWEET
+  #     # - CORE_CONF_fs_defaultFS=hdfs://namenode:8020
+
+  # datanode:
+  #   image: uhopper/hadoop-datanode
+  #   hostname: datanode
+  #   container_name: datanode
+  #   domainname: hadoop
+  #   volumes:
+  #     - datanode-data:/hadoop/dfs/data
+  #   environment:
+  #     - CORE_CONF_fs_defaultFS=hdfs://namenode:8020
+
+  # datanode2:
+  #   image: uhopper/hadoop-datanode
+  #   hostname: datanode2
+  #   container_name: datanode2
+  #   domainname: hadoop
+  #   volumes:
+  #     - datanode2-data:/hadoop/dfs/data
+  #   environment:
+  #     - CORE_CONF_fs_defaultFS=hdfs://namenode:8020
+
+  # datanode3:
+  #   image: uhopper/hadoop-datanode
+  #   hostname: datanode3
+  #   container_name: datanode3
+  #   domainname: hadoop
+  #   volumes:
+  #     - datanode3-data:/hadoop/dfs/data
+  #   environment:
+  #     - CORE_CONF_fs_defaultFS=hdfs://namenode:8020
+
+  # resourcemanager:
+  #   image: uhopper/hadoop-resourcemanager
+  #   hostname: resourcemanager
+  #   container_name: resourcemanager
+  #   domainname: hadoop
+  #   ports:
+  #     - 8088:8088
+  #   environment:
+  #     - CORE_CONF_fs_defaultFS=hdfs://namenode:8020
+  #     - YARN_CONF_yarn_log___aggregation___enable=true
+
+  # nodemanager1:
+  #   image: uhopper/hadoop-nodemanager
+  #   hostname: nodemanager1
+  #   container_name: nodemanager1
+  #   domainname: hadoop
+  #   environment:
+  #     - CORE_CONF_fs_defaultFS=hdfs://namenode:8020
+  #     - YARN_CONF_yarn_resourcemanager_hostname=resourcemanager
+  #     - YARN_CONF_yarn_log___aggregation___enable=true
+  #     - YARN_CONF_yarn_nodemanager_remote___app___log___dir=/app-logs
+
+  # spark:
+  #   image: uhopper/hadoop-spark
+  #   hostname: spark
+  #   container_name: spark
+  #   domainname: hadoop
+  #   environment:
+  #     - CORE_CONF_fs_defaultFS=hdfs://namenode:8020
+  #     - YARN_CONF_yarn_resourcemanager_hostname=resourcemanager
+  #   command: tail -f /var/log/dmesg
+
+# volumes:
+#   namenode-data:
+#   datanode-data:
+  # datanode2-data:
+  # datanode3-data:

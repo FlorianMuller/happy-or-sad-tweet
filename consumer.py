@@ -4,10 +4,10 @@ import json
 from dotenv import load_dotenv
 from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
 from kafka import KafkaConsumer
-import hdfs
+# import hdfs
 
 # Waiting for zookeeper and kafka to start (takes ~ 10 sec)
-time.sleep(30)
+time.sleep(45)
 
 # import logging
 # logging.basicConfig(level=logging.DEBUG)
@@ -42,11 +42,12 @@ consumer = KafkaConsumer(
     value_deserializer=lambda m: json.loads(m.decode('utf-8'))
 )
 
-#Creation du fichier s'il n'existe pas
+# Creation du fichier s'il n'existe pas
 # file_name = "tweets.json"
-# if file_name not in client.list("/data"):
-#     with client.write("/data/"+file_name):
-#         pass
+# file_name = "vide.txt"
+# if file_name not in client.list("/"):
+#     with client.write("/"+file_name) as writer:
+#         writer.write(b"Allez !")
 
 print(f"listening on \"{TOPIC}\"...")
 for message in consumer:
@@ -54,5 +55,5 @@ for message in consumer:
     tweet["details"], tweet["overall_feeling"] = sentiment_scores(tweet['text'])
     print(tweet)
 
-    # with client.write("/data/"+file_name , append=True) as f:
+    # with client.write("/"+file_name , append=True) as f:
     #     f.write((json.dumps(tweet) + "\n").encode('utf-8'))
