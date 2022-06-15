@@ -1,22 +1,31 @@
 import time
+import os
+from datetime import datetime
+from dotenv import load_dotenv
 from pyspark.sql import SparkSession
 import pyspark.sql.functions as f
 from pyspark.sql.functions import regexp_replace
-from dotenv import load_dotenv
 import streamlit as st
 import matplotlib.pyplot as plt
 import seaborn as sns
-from datetime import datetime
 
 load_dotenv()
+TOPIC = f"{os.environ['TWITTER_KEYWORD']}_tweet"
 
 spark = SparkSession.builder \
     .master("local[1]") \
     .appName("dashboard") \
     .getOrCreate()
 
-# Read JSON file into dataframe
-df = spark.read.json("hdfs://localhost:54310/data/tweets.json")
+# Get Mongo data into dataframe
+df = spark \
+    .read \
+    .format("mongodb") \
+    .option("connection.uri", f"mongodb://root:example@localhost:27017") \
+    .option("database", "ridiculus_elephant") \
+    .option("collection", TOPIC) \
+    .load()
+
 df = df.withColumn("created_at", regexp_replace('created_at', 'Z','+00:00'))
 df.createOrReplaceTempView("Tweets")
 general_df = spark.sql("SELECT author_id, created_at, id, lang, text, overall_feeling FROM Tweets")
@@ -33,7 +42,13 @@ grouped_df = spark.sql("SELECT overall_feeling, COUNT(id) as count FROM Tweets G
 pd_grouped_df = grouped_df.toPandas()
 
 def get_json_from_dfs(file_path):
-    return spark.read.json(f"hdfs://localhost:54310{file_path}")
+    return spark \
+        .read \
+        .format("mongodb") \
+        .option("connection.uri", f"mongodb://root:example@localhost:27017") \
+        .option("database", "ridiculus_elephant") \
+        .option("collection", TOPIC) \
+        .load()
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -111,7 +126,7 @@ def page_tfidf(state):
             .filter(tf_idf["overall_feeling"] == feel) \
             .select("tf.word", "tf_idf", "term_frequency") \
             .sort(f.col("tf_idf").desc()) \
-            .toPandas(),    
+            .toPandas(),
         width=500)
 
     # method

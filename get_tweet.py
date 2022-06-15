@@ -74,7 +74,8 @@ def main():
     try:
         # Start streaming tweet
         twitter_stream.filter(
-            tweet_fields=["id", "text", "created_at", "author_id", "attachments", "entities", "geo", "lang"]
+            # tweet_fields=["id", "text", "created_at", "author_id", "attachments", "entities", "geo", "lang"]
+            tweet_fields=["id", "text", "created_at", "author_id", "lang"]
         )
     except KeyboardInterrupt:
         producer.flush()
