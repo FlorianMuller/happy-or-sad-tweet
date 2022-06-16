@@ -1,7 +1,7 @@
 # Happy or Sad tweet ?
 
 ## Architecture du projet
-![Architecture diagram](image/Pipeline.png)
+![Architecture diagram](image/pipeline.png)
 
 ## Start project
 Install dependecies
