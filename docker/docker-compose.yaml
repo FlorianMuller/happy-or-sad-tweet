@@ -70,8 +70,8 @@ services:
         - kafka_broker_2
     profiles: ["stream"]
     build:
-      context: .
-      dockerfile: Dockerfile_producer
+      context: ../.
+      dockerfile: ./docker/Dockerfile_producer
       
   consumer:
     container_name: consumer
@@ -81,8 +81,8 @@ services:
         - kafka_broker_2
     profiles: ["stream"]
     build:
-      context: .
-      dockerfile: Dockerfile_consumer
+      context: ../.
+      dockerfile: ./docker/Dockerfile_consumer
     restart: on-failure
 
   mongo:
@@ -114,20 +114,22 @@ services:
     container_name: dashboard
     profiles: ["dashboard"]
     build:
-      context: .
-      dockerfile: Dockerfile_dashboard
+      context: ../.
+      dockerfile: ./docker/Dockerfile_dashboard
     depends_on:
       - mongo
     ports:
       - 8501:8501
     restart: on-failure
     volumes:
-      - ./:/home/user/pjt_final/happy-or-sad-tweet/
-    command: "streamlit run streamlit/app.py"
+      - ../.:/home/user/pjt_final/happy-or-sad-tweet/
+    command: "streamlit run src/app.py"
 
   spark:
-    build: "./spark"
     container_name: spark_master
+    build:
+      context: ../.
+      dockerfile: ./docker/Dockerfile_spark
     hostname: spark_master
     user: root
     profiles: ["stream"]
@@ -140,7 +142,9 @@ services:
 
   spark-worker1:
     container_name: spark-worker1
-    build: "./spark"
+    build:
+      context: ../.
+      dockerfile: ./docker/Dockerfile_spark
     depends_on:
       - spark
     profiles: ["stream"]
@@ -156,7 +160,9 @@ services:
 
   spark-worker2:
     container_name: spark-worker2
-    build: "./spark"
+    build:
+      context: ../.
+      dockerfile: ./docker/Dockerfile_spark
     depends_on:
       - spark
     profiles: ["stream"]

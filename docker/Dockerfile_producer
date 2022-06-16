@@ -2,10 +2,12 @@ FROM python:3.9
 
 WORKDIR /home/user/pjt_final/happy-or-sad-tweet/
 
-COPY requirements.txt requirements.txt
+COPY /requirements.txt requirements.txt
 
 RUN pip3 install -r requirements.txt
 
+COPY src/get_tweet.py src/get_tweet.py
+
 COPY . .
 
-CMD [ "python3","get_tweet.py"]
+CMD [ "python3","src/get_tweet.py"]
