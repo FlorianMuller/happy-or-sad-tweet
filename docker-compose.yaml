@@ -121,12 +121,16 @@ services:
     ports:
       - 8501:8501
     restart: on-failure
+    volumes:
+      - ./:/home/user/pjt_final/happy-or-sad-tweet/
+    command: "streamlit run streamlit/app.py"
 
   spark:
     build: "./spark"
     container_name: spark_master
     hostname: spark_master
     user: root
+    profiles: ["stream"]
     environment:
       - SPARK_MODE=master
       - SPARK_RPC_AUTHENTICATION_ENABLED=no
@@ -134,10 +138,12 @@ services:
       - SPARK_LOCAL_STORAGE_ENCRYPTION_ENABLED=no
       - SPARK_SSL_ENABLED=no
 
-  spark-worker:
+  spark-worker1:
+    container_name: spark-worker1
     build: "./spark"
     depends_on:
       - spark
+    profiles: ["stream"]
     environment:
       - SPARK_MODE=worker
       - SPARK_MASTER_URL=spark://spark:7077
@@ -149,9 +155,11 @@ services:
       - SPARK_SSL_ENABLED=no
 
   spark-worker2:
+    container_name: spark-worker2
     build: "./spark"
     depends_on:
       - spark
+    profiles: ["stream"]
     environment:
       - SPARK_MODE=worker
       - SPARK_MASTER_URL=spark://spark:7077
