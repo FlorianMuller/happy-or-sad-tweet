@@ -18,7 +18,8 @@ spark = SparkSession.builder \
     .getOrCreate()
 
 # Read JSON file into dataframe
-df = spark.read.json("hdfs://localhost:54310/data/tweets.json")
+#df = spark.read.json("hdfs://localhost:54310/data/tweets.json")
+df = spark.read.json("hdfs://localhost:9000/data/tweets.json")
 df = df.withColumn("created_at", regexp_replace('created_at', 'Z','+00:00'))
 df.createOrReplaceTempView("Tweets")
 general_df = spark.sql("SELECT author_id, created_at, id, lang, text, overall_feeling FROM Tweets")
@@ -52,7 +53,7 @@ def main():
         "Versus Analyzers": page_NLP_compare
     }
 
-    st.sidebar.title("Projet Big Data 2")
+    st.sidebar.title("Projet Final Big Data")
     st.sidebar.subheader("Menu")
     selection = st.sidebar.radio("", tuple(pages.keys()))
     pages[selection](state)
