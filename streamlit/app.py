@@ -1,13 +1,15 @@
 import time
 import os
+from pyspark.sql import SparkSession, Row
 from datetime import datetime
 from dotenv import load_dotenv
-from pyspark.sql import SparkSession
 import pyspark.sql.functions as f
 from pyspark.sql.functions import regexp_replace
 import streamlit as st
+import plotly.express as px
+import plotly.graph_objects as pgo
 import matplotlib.pyplot as plt
-import seaborn as sns
+#import seaborn as sns
 
 load_dotenv()
 TOPIC = f"{os.environ['TWITTER_KEYWORD']}_tweet"
@@ -59,10 +61,11 @@ def main():
         "Nb tweets": page_nb_tweet,
         "Evolution temporelle": page_evolution_temporelle,
         "Mots clés (TF-IDF)": page_tfidf,
-        "Feed temps réel": page_feed
+        "Feed temps réel": page_feed,
+        "Versus Analyzers": page_NLP_compare
     }
 
-    st.sidebar.title("Projet Big Data 2")
+    st.sidebar.title("Projet Final Big Data")
     st.sidebar.subheader("Menu")
     selection = st.sidebar.radio("", tuple(pages.keys()))
     pages[selection](state)
@@ -160,6 +163,65 @@ def page_feed(state):
             )
 
         time.sleep(1)
+
+def page_NLP_compare(state):
+    st.title("Versus Analyzers")
+    # creating a single-element container.
+    placeholder = st.empty()
+    spark = SparkSession.builder.getOrCreate()
+    #fig_col1 = st.columns(1)[0]
+    
+    #for seconds in range(200):
+    while True:
+      df = get_json_from_dfs("/data/tweets.json")
+      with placeholder.container():
+      #with fig_col1:
+        #df_comparison_per_tweets = df.select("overall_feeling","afinn_feeling","spacy_feeling").groupby("overall_feeling","afinn_feeling","spacy_feeling").agg(f.count("overall_feeling").alias("VaderCount"),f.count("afinn_feeling").alias("AfinnCount"),f.count("spacy_feeling").alias("SpacyCount"))
+
+        # Kept for easy access needs
+        feelings = {} 
+        feelings["afinn_positive"] = df.where(df.afinn_feeling == "Positive").count()
+        feelings["afinn_neutral"] = df.where(df.afinn_feeling == "Neutral").count()
+        feelings["afinn_negative"] = df.where(df.afinn_feeling == "Negative").count()
+        feelings["spacy_positive"] = df.where(df.spacy_feeling == "Positive").count()
+        feelings["spacy_neutral"] = df.where(df.spacy_feeling == "Neutral").count()
+        feelings["spacy_negative"] = df.where(df.spacy_feeling == "Negative").count()
+        feelings["vader_positive"] = df.where(df.overall_feeling == "Positive").count()
+        feelings["vader_neutral"] = df.where(df.overall_feeling == "Neutral").count()
+        feelings["vader_negative"] = df.where(df.overall_feeling == "Negative").count()
+        #print(feelings)
+
+        # To format in DataFrame to use in Histogram (bar)
+        df_feels = spark.createDataFrame([
+              Row(analyzer="Spacy",sentiment="Positive",count=feelings["spacy_positive"]),
+              Row(analyzer="Spacy",sentiment="Neutral",count=feelings["spacy_neutral"]),
+              Row(analyzer="Spacy",sentiment="Negative",count=feelings["spacy_negative"]),
+              Row(analyzer="Afinn",sentiment="Positive",count=feelings["afinn_positive"]),
+              Row(analyzer="Afinn",sentiment="Neutral",count=feelings["afinn_neutral"]),
+              Row(analyzer="Afinn",sentiment="Negative",count=feelings["afinn_negative"]),
+              Row(analyzer="Vader",sentiment="Positive",count=feelings["vader_positive"]),
+              Row(analyzer="Vader",sentiment="Neutral",count=feelings["vader_neutral"]),
+              Row(analyzer="Vader",sentiment="Negative",count=feelings["vader_negative"])
+        ])
+
+        # Subtitle
+        st.markdown("NLP engines Comparison")
+        
+        #analyzers = ["Spacy","Spacy","Spacy","Afinn","Afinn","Afinn","Vader","Vader","Vader"]
+        #Format du style sentiment = ["Positive","Positive","Positive","Neutral","Neutral","Neutral","Negative","Negative","Negative"]
+        
+        #fig = px.histogram(dataframe=feelings, x="Analyzer", color="Feeling",category_orders=dict(["Spacy", "Afinn", "Vader"]))
+        fig = px.bar(df_feels.toPandas(),x="analyzer",y="count",color="sentiment",barmode="group")
+        #fig.show()
+        #fig = pgo.Figure()
+        #df_feels.show()
+        #for analyzer, sentiments in df_feels.collect(): 
+        #  fig.add_trace(pgo.Bar(x=analyzer,y=count_feelings)
+        
+        st.write(fig)
+      time.sleep(1)
+    
+ 
 
 ########################################################
 # EXECUTION DU CODE

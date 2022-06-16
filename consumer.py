@@ -8,13 +8,49 @@ from pyspark.sql import SparkSession
 import pyspark.sql.functions as f
 from pyspark.sql.types import StructType, StructField, StringType, FloatType
 from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
+import eng_spacysentiment
+from afinn import Afinn
 
+# Initialize Afinn Engine
+afinn = Afinn()
+
+# Load Spacy NLP english engine
+spacy_nlp = eng_spacysentiment.load()
+
+# Create a SentimentIntensityAnalyzer object.
+sid_obj = SentimentIntensityAnalyzer()
+ 
 
 # take environment variables from .env
 load_dotenv()
 KAFKA_BROKERS = os.environ["KAFKA_BROKERS"]
-TOPIC = f"{os.environ['TWITTER_KEYWORD']}_tweet"
+#TOPIC = f"{os.environ['TWITTER_KEYWORD']}_tweet"
+TOPIC = "twitter-topic"
 
+# Compute Afinn sentiment version
+def afinn_sentiment(afinn,text):
+  score = afinn.score(text)
+  if abs(score) < 0.5:
+    # Neutral (=> between -0.5 and 0.5, through abs function)
+    feeling = "Neutral"
+  elif score > 0.5:
+    # Positive
+    feeling = "Positive"
+  else:
+    # Negative
+    feeling = "Negative"
+
+  return score, feeling
+
+# Compute spacy sentiment version
+def spacy_sentiment(nlp, text):
+  doc = nlp(text)
+  if doc.cats["positive"] > doc.cats["negative"]:
+    feeling = "Positive"
+  elif doc.cats["negative"] > doc.cats["positive"]:
+    feeling = "Negative"
+  else:
+    feeling = "Neutral"
 
 # Creating spark session
 spark = SparkSession.builder \
@@ -52,11 +88,12 @@ json_schema = StructType([
 ])
 json_df = kafka_df.withColumn('value', f.from_json(f.col('value'), json_schema)).select(f.col("value.*"))
 
-def sentiment_scores(sentence):
-    # Create a SentimentIntensityAnalyzer object.
-    sid_obj = SentimentIntensityAnalyzer()
     return sid_obj.polarity_scores(sentence)
 
+  return doc.cats, feeling
+
+# Compute vader sentiment version
+def vader_sentiment(sid_obj, sentence):
 
 def simplify_sentiment(sentiment_scores):
     if sentiment_scores['compound'] >= 0.05 :
@@ -81,7 +118,6 @@ json_df = json_df \
 
 
 
-
 # Sarting streaming to mongodb
 query = json_df \
     .writeStream \
@@ -101,6 +137,10 @@ query.awaitTermination()
 #     .format("console") \
 #     .start()
 # query.awaitTermination() 
+    tweet["details"], tweet["overall_feeling"] = vader_sentiment(sid_obj, tweet['text'])
+    tweet["details_spacy"], tweet["spacy_feeling"] = spacy_sentiment(spacy_nlp, tweet['text'])
+    tweet["details_afinn"], tweet["afinn_feeling"] = afinn_sentiment(afinn, tweet['text'])
+
 
 
 
