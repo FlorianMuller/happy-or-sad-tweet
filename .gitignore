@@ -1,3 +1,5 @@
 zookeeper.out
 .idea
 .env
+.metals
+.vscode

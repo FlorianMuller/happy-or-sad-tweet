@@ -89,6 +89,10 @@ services:
     image: mongo
     restart: always
     profiles: ["db"]
+    ports:
+      - 27017:27017
+    volumes:
+      - mongo-data:/data/db
     environment:
       MONGO_INITDB_ROOT_USERNAME: root
       MONGO_INITDB_ROOT_PASSWORD: example
@@ -111,93 +115,6 @@ services:
     build:
       context: .
       dockerfile: Dockerfile_dashboard
-
-
-
-
-
-
-
-
-  ## TENTATIVE HADOOP-SPARK ##
-  # namenode:
-  #   image: uhopper/hadoop-namenode
-  #   hostname: namenode
-  #   container_name: namenode
-  #   domainname: hadoop
-  #   volumes:
-  #     - namenode-data:/hadoop/dfs/name
-  #   ports:
-  #     - "50070:50070"
-  #     - "8020:8020"
-  #   environment:
-  #     - CLUSTER_NAME=HAPPY-TWEET
-  #     # - CORE_CONF_fs_defaultFS=hdfs://namenode:8020
-
-  # datanode:
-  #   image: uhopper/hadoop-datanode
-  #   hostname: datanode
-  #   container_name: datanode
-  #   domainname: hadoop
-  #   volumes:
-  #     - datanode-data:/hadoop/dfs/data
-  #   environment:
-  #     - CORE_CONF_fs_defaultFS=hdfs://namenode:8020
-
-  # datanode2:
-  #   image: uhopper/hadoop-datanode
-  #   hostname: datanode2
-  #   container_name: datanode2
-  #   domainname: hadoop
-  #   volumes:
-  #     - datanode2-data:/hadoop/dfs/data
-  #   environment:
-  #     - CORE_CONF_fs_defaultFS=hdfs://namenode:8020
-
-  # datanode3:
-  #   image: uhopper/hadoop-datanode
-  #   hostname: datanode3
-  #   container_name: datanode3
-  #   domainname: hadoop
-  #   volumes:
-  #     - datanode3-data:/hadoop/dfs/data
-  #   environment:
-  #     - CORE_CONF_fs_defaultFS=hdfs://namenode:8020
-
-  # resourcemanager:
-  #   image: uhopper/hadoop-resourcemanager
-  #   hostname: resourcemanager
-  #   container_name: resourcemanager
-  #   domainname: hadoop
-  #   ports:
-  #     - 8088:8088
-  #   environment:
-  #     - CORE_CONF_fs_defaultFS=hdfs://namenode:8020
-  #     - YARN_CONF_yarn_log___aggregation___enable=true
-
-  # nodemanager1:
-  #   image: uhopper/hadoop-nodemanager
-  #   hostname: nodemanager1
-  #   container_name: nodemanager1
-  #   domainname: hadoop
-  #   environment:
-  #     - CORE_CONF_fs_defaultFS=hdfs://namenode:8020
-  #     - YARN_CONF_yarn_resourcemanager_hostname=resourcemanager
-  #     - YARN_CONF_yarn_log___aggregation___enable=true
-  #     - YARN_CONF_yarn_nodemanager_remote___app___log___dir=/app-logs
-
-  # spark:
-  #   image: uhopper/hadoop-spark
-  #   hostname: spark
-  #   container_name: spark
-  #   domainname: hadoop
-  #   environment:
-  #     - CORE_CONF_fs_defaultFS=hdfs://namenode:8020
-  #     - YARN_CONF_yarn_resourcemanager_hostname=resourcemanager
-  #   command: tail -f /var/log/dmesg
-
-# volumes:
-#   namenode-data:
-#   datanode-data:
-  # datanode2-data:
-  # datanode3-data:
+      
+volumes:
+  mongo-data:
