@@ -9,19 +9,22 @@ import streamlit as st
 import matplotlib.pyplot as plt
 import seaborn as sns
 
+time.sleep(30)
+
 load_dotenv()
 TOPIC = f"{os.environ['TWITTER_KEYWORD']}_tweet"
 
 spark = SparkSession.builder \
-    .master("local[1]") \
+    .master("spark://spark:7077") \
     .appName("dashboard") \
+    .config('spark.jars.packages', 'org.mongodb.spark:mongo-spark-connector:10.0.2,org.mongodb:mongo-java-driver:3.12.11') \
     .getOrCreate()
 
 # Get Mongo data into dataframe
 df = spark \
     .read \
     .format("mongodb") \
-    .option("connection.uri", f"mongodb://root:example@localhost:27017") \
+    .option("connection.uri", f"mongodb://root:example@mongo:27017") \
     .option("database", "ridiculus_elephant") \
     .option("collection", TOPIC) \
     .load()
@@ -45,7 +48,7 @@ def get_json_from_dfs(file_path):
     return spark \
         .read \
         .format("mongodb") \
-        .option("connection.uri", f"mongodb://root:example@localhost:27017") \
+        .option("connection.uri", f"mongodb://root:example@mongo:27017") \
         .option("database", "ridiculus_elephant") \
         .option("collection", TOPIC) \
         .load()

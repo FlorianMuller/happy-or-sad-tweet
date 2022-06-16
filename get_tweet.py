@@ -5,7 +5,7 @@ from dotenv import load_dotenv
 import tweepy
 from kafka import KafkaProducer
 
-# Waiting for zookeeper and kafka to start (takes ~ 10 sec)
+# Waiting for zookeeper and kafka to start
 time.sleep(40)
 
 # import logging
@@ -63,8 +63,8 @@ def main():
     
     # Callbacks
     def send_tweet(tweet):
-        #print(json.dumps(tweet.data, indent=4, sort_keys=True))
-        #print("~~~~~~~~~~~~~~~~")
+        print(json.dumps(tweet.data, indent=4, sort_keys=True))
+        print("~~~~~~~~~~~~~~~~")
 
         producer.send(TOPIC, tweet.data)
 
