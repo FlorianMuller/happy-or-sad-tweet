@@ -1,7 +1,3 @@
-# spark-submit --packages org.apache.spark:spark-sql-kafka-0-10_2.12:3.2.1,org.apache.kafka:kafka-clients:2.7.0,org.mongodb.spark:mongo-spark-connector:10.0.2 streaming_some_sheet.py
-# org.apache.spark:spark-sql-kafka-0-10_2.12:3.2.1
-# org.apache.kafka:kafka-clients:2.7.0
-# org.mongodb.spark:mongo-spark-connector:10.0.2
 import os
 import time
 from dotenv import load_dotenv
@@ -92,41 +88,3 @@ query = json_df \
     .outputMode("append") \
     .start()
 query.awaitTermination()
-
-# Sarting streaming to the console (debuging)
-# query = json_df \
-#     .writeStream \
-#     .outputMode("append") \
-#     .format("console") \
-#     .start()
-# query.awaitTermination() 
-
-
-
-
-# Lazily instantiated global instance of SparkSession
-# def getSparkSessionInstance(sparkConf):
-#     if ("sparkSessionSingletonInstance" not in globals()):
-#         # For local testing and unit tests, you can pass “local[*]” to run Spark Streaming in-process (detects the number of cores in the local system)
-#         globals()["sparkSessionSingletonInstance"] = SparkSession \
-#             .builder \
-#             .config(conf=sparkConf) \
-#             .getOrCreate()
-#     return globals()["sparkSessionSingletonInstance"]
-
-# def func_call(df, batch_id):
-#     df.selectExpr("CAST(value AS STRING) as json")
-#     requests = df.rdd.map(lambda x: x.value).collect()
-#     print(requests)
-
-    # .foreachBatch(func_call) \
-    # .trigger(processingTime="5") \
-    # .start() \
-    # .awaitTermination()
-
-# .format(HiveWarehouseSession.STREAM_TO_STREAM) \
-# .option("checkpointLocation","file://F:/tmp/kafka/checkpoint") \
-
-# s.pprint()
-# ssc.start()             # Start the computation
-# ssc.awaitTermination()  # Wait for the computation to terminate
