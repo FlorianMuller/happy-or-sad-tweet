@@ -1,7 +1,3 @@
-# spark-submit --packages org.apache.spark:spark-sql-kafka-0-10_2.12:3.2.1,org.apache.kafka:kafka-clients:2.7.0,org.mongodb.spark:mongo-spark-connector:10.0.2 streaming_some_sheet.py
-# org.apache.spark:spark-sql-kafka-0-10_2.12:3.2.1
-# org.apache.kafka:kafka-clients:2.7.0
-# org.mongodb.spark:mongo-spark-connector:10.0.2
 import os
 import time
 from dotenv import load_dotenv
@@ -10,51 +6,52 @@ import pyspark.sql.functions as f
 from pyspark.sql.types import StructType, StructField, StringType, FloatType
 from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
 
-time.sleep(45)
 # take environment variables from .env
 load_dotenv()
-KAFKA_BROKERS = os.environ["KAFKA_BROKERS"]
 TOPIC = f"{os.environ['TWITTER_KEYWORD']}_tweet"
 
 
-# Creating spark session
-spark = (
-    SparkSession.builder.master("spark://spark:7077")
-    .appName("twitter_sentiment")
-    .config("spark.mongodb.read.connection.uri", "mongodb://root:example@mongo:27017/ridiculus_elephant") \
-    .config("spark.mongodb.write.connection.uri", "mongodb://root:example@mongo:27017/ridiculus_elephant") \
-    .getOrCreate()
-)
-spark.sparkContext.setLogLevel('WARN')
-
-kafka_df = spark \
-  .readStream \
-  .format("kafka") \
-  .option("kafka.bootstrap.servers", KAFKA_BROKERS) \
-  .option("subscribe", TOPIC) \
-  .load()
-
-kafka_df = kafka_df.selectExpr("CAST(key AS STRING)", "CAST(value AS STRING)")
+def init_spark():
+    spark = (
+        SparkSession.builder.master(os.environ["SPARK_MASTER"])
+        .appName("twitter_sentiment")
+        .config("spark.mongodb.read.connection.uri", f"{os.environ['MONGO_URI']}/{os.environ['MONGO_DB']}")
+        .config("spark.mongodb.write.connection.uri", f"{os.environ['MONGO_URI']}/{os.environ['MONGO_DB']}")
+        .getOrCreate()
+    )
+    spark.sparkContext.setLogLevel('WARN')
+    return spark
 
 
-# json_schema = spark.read.json(kafka_df).schema
-json_schema = StructType([
-    StructField("id", StringType(), False),
-    StructField("text", StringType(), False),
-    StructField("created_at", StringType(), False),
-    StructField("author_id", StringType(), False),
-    StructField("lang", StringType(), True),
-    # StructField("geo", StructField([
-    # ]), True),
-    # StructField("entities", StructField([
-    # ]), True),
-    # StructField("attachments", StructField([
-    # ]), True),
-])
-json_df = kafka_df.withColumn('value', f.from_json(f.col('value'), json_schema)).select(f.col("value.*"))
+def read_stream_from_kafka(spark):
+    return spark \
+        .readStream \
+        .format("kafka") \
+        .option("kafka.bootstrap.servers", os.environ["KAFKA_BROKERS"]) \
+        .option("subscribe", TOPIC) \
+        .load()
+
+
+def json_string_to_df(df):
+    json_schema = StructType([
+        StructField("id", StringType(), False),
+        StructField("text", StringType(), False),
+        StructField("created_at", StringType(), False),
+        StructField("author_id", StringType(), False),
+        StructField("lang", StringType(), True),
+        # Todo: add more fields from twitter api
+        # StructField("geo", StructType([
+        # ]), True),
+        # StructField("entities", StructType([
+        # ]), True),
+        # StructField("attachments", StructType([
+        # ]), True),
+    ])
+
+    return df.withColumn('value', f.from_json(f.col('value'), json_schema)).select(f.col("value.*"))
+
 
 def sentiment_scores(sentence):
-    # Create a SentimentIntensityAnalyzer object.
     sid_obj = SentimentIntensityAnalyzer()
     return sid_obj.polarity_scores(sentence)
 
@@ -67,66 +64,59 @@ def simplify_sentiment(sentiment_scores):
     else :
         return "Neutral"
 
-# Creating spark user function
-udf_sentiment_scores = f.udf(sentiment_scores, returnType=StructType([
-    StructField("pos", FloatType(), False),
-    StructField("compound", FloatType(), False),
-    StructField("neu", FloatType(), False),
-    StructField("neg", FloatType(), False),
-]))
-udf_simplify_sentiment = f.udf(simplify_sentiment, returnType=StringType())
 
-json_df = json_df \
-    .withColumn("details_feeling", udf_sentiment_scores("text")) \
-    .withColumn("overall_feeling", udf_simplify_sentiment("details_feeling"))
+def add_sentiment(df):
+    # Creating spark user define function (udf)
+    udf_sentiment_scores = f.udf(sentiment_scores, returnType=StructType([
+        StructField("pos", FloatType(), False),
+        StructField("compound", FloatType(), False),
+        StructField("neu", FloatType(), False),
+        StructField("neg", FloatType(), False),
+    ]))
+    udf_simplify_sentiment = f.udf(simplify_sentiment, returnType=StringType())
 
-
-# Starting streaming to mongodb
-query = json_df \
-    .writeStream \
-    .option("checkpointLocation", "/tmp/spark-checkpoint2") \
-    .format("mongodb") \
-    .option("spark.mongodb.connection.uri", "mongodb://root:example@mongo:27017") \
-    .option("spark.mongodb.database", "ridiculus_elephant") \
-    .option("spark.mongodb.collection", TOPIC) \
-    .outputMode("append") \
-    .start()
-query.awaitTermination()
-
-# Sarting streaming to the console (debuging)
-# query = json_df \
-#     .writeStream \
-#     .outputMode("append") \
-#     .format("console") \
-#     .start()
-# query.awaitTermination() 
+    return df \
+        .withColumn("details_feeling", udf_sentiment_scores("text")) \
+        .withColumn("overall_feeling", udf_simplify_sentiment("details_feeling"))
 
 
+def write_stream_to_mongo(df):
+    # Stream to console (for debugging)
+    # return df \
+    #     .writeStream \
+    #     .outputMode("append") \
+    #     .format("console") \
+    #     .start()
+
+    return df \
+        .writeStream \
+        .option("checkpointLocation", "/tmp/spark-checkpoint2") \
+        .format("mongodb") \
+        .option("spark.mongodb.connection.uri", "mongodb://root:example@mongo:27017") \
+        .option("spark.mongodb.database", "ridiculus_elephant") \
+        .option("spark.mongodb.collection", TOPIC) \
+        .outputMode("append") \
+        .start()
 
 
-# Lazily instantiated global instance of SparkSession
-# def getSparkSessionInstance(sparkConf):
-#     if ("sparkSessionSingletonInstance" not in globals()):
-#         # For local testing and unit tests, you can pass “local[*]” to run Spark Streaming in-process (detects the number of cores in the local system)
-#         globals()["sparkSessionSingletonInstance"] = SparkSession \
-#             .builder \
-#             .config(conf=sparkConf) \
-#             .getOrCreate()
-#     return globals()["sparkSessionSingletonInstance"]
+def main():
+    # Creating spark session
+    spark = init_spark()
+    
+    # Streaming data from kafka
+    kafka_df = read_stream_from_kafka(spark)
 
-# def func_call(df, batch_id):
-#     df.selectExpr("CAST(value AS STRING) as json")
-#     requests = df.rdd.map(lambda x: x.value).collect()
-#     print(requests)
+    # Convert kafka json string to dataframe
+    kafka_df = kafka_df.selectExpr("CAST(value AS STRING)")
+    json_df = json_string_to_df(kafka_df)
 
-    # .foreachBatch(func_call) \
-    # .trigger(processingTime="5") \
-    # .start() \
-    # .awaitTermination()
+    # Sentiment analysis
+    json_df = add_sentiment(json_df)
 
-# .format(HiveWarehouseSession.STREAM_TO_STREAM) \
-# .option("checkpointLocation","file://F:/tmp/kafka/checkpoint") \
+    # Send stream to mongoDB
+    query = write_stream_to_mongo(json_df)
+    query.awaitTermination()
 
-# s.pprint()
-# ssc.start()             # Start the computation
-# ssc.awaitTermination()  # Wait for the computation to terminate
+if __name__ == "__main__":
+    time.sleep(45)
+    main()
