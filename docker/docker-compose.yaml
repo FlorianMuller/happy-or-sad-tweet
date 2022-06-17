@@ -1,0 +1,190 @@
+version: "2"
+services:
+
+  producer:
+    container_name: producer
+    depends_on:
+        - kafka_broker_0
+        - kafka_broker_1
+        - kafka_broker_2
+    profiles: ["stream"]
+    build:
+      context: ../.
+      dockerfile: ./docker/Dockerfile_producer
+    env_file:
+      - config.env
+    environment:
+      - TWITTER_BEARER_TOKEN=${TWITTER_BEARER_TOKEN}
+
+  consumer:
+    container_name: consumer
+    depends_on:
+        - kafka_broker_0
+        - kafka_broker_1
+        - kafka_broker_2
+    profiles: ["stream"]
+    build:
+      context: ../.
+      dockerfile: ./docker/Dockerfile_consumer
+    restart: on-failure
+    env_file:
+      - config.env
+
+  dashboard:
+    container_name: dashboard
+    profiles: ["dashboard"]
+    build:
+      context: ../.
+      dockerfile: ./docker/Dockerfile_dashboard
+    restart: on-failure
+    depends_on:
+      - mongo
+    ports:
+      - 8501:8501
+    env_file:
+      - config.env
+    volumes:
+      - ../.:/home/user/pjt_final/happy-or-sad-tweet/
+    command: "streamlit run src/app.py"
+
+  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  # KAFKA
+  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  zookeeper:
+    container_name: zookeeper
+    image: confluentinc/cp-zookeeper:latest
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    ports:
+      - 22181:2181
+    profiles: ["stream"]
+  
+  kafka_broker_0:
+    container_name: kafka_broker_0
+    image: confluentinc/cp-kafka:latest
+    profiles: ["stream"]
+    depends_on:
+      - zookeeper
+    environment:
+      KAFKA_BROKER_ID: 0
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka_broker_0:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+
+  kafka_broker_1:
+    container_name: kafka_broker_1
+    image: confluentinc/cp-kafka:latest
+    profiles: ["stream"]
+    depends_on:
+      - zookeeper
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka_broker_1:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+
+  kafka_broker_2:
+    container_name: kafka_broker_2
+    image: confluentinc/cp-kafka:latest
+    profiles: ["stream"]
+    depends_on:
+      - zookeeper
+    environment:
+      KAFKA_BROKER_ID: 2
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka_broker_2:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+
+  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  # MONGO
+  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+  mongo:
+    container_name: mongo
+    image: mongo
+    restart: always
+    profiles: ["db"]
+    ports:
+      - 27017:27017
+    volumes:
+      - mongo-data:/data/db
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: example
+
+  mongo-express:
+    container_name: mongo-express
+    image: mongo-express
+    restart: always
+    profiles: ["db"]
+    ports:
+      - 8081:8081
+    environment:
+      ME_CONFIG_MONGODB_ADMINUSERNAME: root
+      ME_CONFIG_MONGODB_ADMINPASSWORD: example
+      ME_CONFIG_MONGODB_URL: mongodb://root:example@mongo:27017/
+
+  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  # SPARK
+  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+  spark:
+    container_name: spark_master
+    build:
+      context: ../.
+      dockerfile: ./docker/Dockerfile_spark
+    hostname: spark_master
+    user: root
+    profiles: ["stream"]
+    environment:
+      - SPARK_MODE=master
+      - SPARK_RPC_AUTHENTICATION_ENABLED=no
+      - SPARK_RPC_ENCRYPTION_ENABLED=no
+      - SPARK_LOCAL_STORAGE_ENCRYPTION_ENABLED=no
+      - SPARK_SSL_ENABLED=no
+
+  spark-worker1:
+    container_name: spark-worker1
+    build:
+      context: ../.
+      dockerfile: ./docker/Dockerfile_spark
+    depends_on:
+      - spark
+    profiles: ["stream"]
+    environment:
+      - SPARK_MODE=worker
+      - SPARK_MASTER_URL=spark://spark:7077
+      - SPARK_WORKER_MEMORY=1G
+      - SPARK_WORKER_CORES=1
+      - SPARK_RPC_AUTHENTICATION_ENABLED=no
+      - SPARK_RPC_ENCRYPTION_ENABLED=no
+      - SPARK_LOCAL_STORAGE_ENCRYPTION_ENABLED=no
+      - SPARK_SSL_ENABLED=no
+
+  spark-worker2:
+    container_name: spark-worker2
+    build:
+      context: ../.
+      dockerfile: ./docker/Dockerfile_spark
+    depends_on:
+      - spark
+    profiles: ["stream"]
+    environment:
+      - SPARK_MODE=worker
+      - SPARK_MASTER_URL=spark://spark:7077
+      - SPARK_WORKER_MEMORY=2G
+      - SPARK_WORKER_CORES=1
+      - SPARK_RPC_AUTHENTICATION_ENABLED=no
+      - SPARK_RPC_ENCRYPTION_ENABLED=no
+      - SPARK_LOCAL_STORAGE_ENCRYPTION_ENABLED=no
+      - SPARK_SSL_ENABLED=no
+
+volumes:
+  mongo-data:

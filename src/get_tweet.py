@@ -1,8 +1,12 @@
 import os
+import time
 import json
 from dotenv import load_dotenv
 import tweepy
 from kafka import KafkaProducer
+
+# import logging
+# logging.basicConfig(level=logging.DEBUG)
 
 # take environment variables from .env
 load_dotenv()
@@ -44,13 +48,12 @@ def define_twitter_rules(twitter_stream, wanted_rules):
         twitter_stream.add_rules(wrule)
 
 
-
-
 def main():
     twitter_stream = tweepy.StreamingClient(os.environ["TWITTER_BEARER_TOKEN"])
     producer = KafkaProducer(
         bootstrap_servers=KAFKA_BROKERS,
-        value_serializer=lambda m: json.dumps(m).encode('utf-8')
+        value_serializer=lambda m: json.dumps(m).encode('utf-8'),
+        api_version=(0, 10, 1)
     )
     
     # Callbacks
@@ -82,4 +85,5 @@ def main():
 
 
 if __name__ == "__main__":
+    time.sleep(40)
     main()
