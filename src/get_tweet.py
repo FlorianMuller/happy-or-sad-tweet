@@ -5,9 +5,6 @@ from dotenv import load_dotenv
 import tweepy
 from kafka import KafkaProducer
 
-# Waiting for zookeeper and kafka to start
-time.sleep(40)
-
 # import logging
 # logging.basicConfig(level=logging.DEBUG)
 
@@ -88,4 +85,5 @@ def main():
 
 
 if __name__ == "__main__":
+    time.sleep(40)
     main()
