@@ -51,8 +51,6 @@ def define_twitter_rules(twitter_stream, wanted_rules):
         twitter_stream.add_rules(wrule)
 
 
-
-
 def main():
     twitter_stream = tweepy.StreamingClient(os.environ["TWITTER_BEARER_TOKEN"])
     producer = KafkaProducer(
