@@ -7,6 +7,5 @@ COPY requirements.txt requirements.txt
 RUN pip3 install -r requirements.txt
 
 COPY src/app.py src/app.py
-COPY .env .
 
 CMD [ "streamlit","run","src/app.py"]

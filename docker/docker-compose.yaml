@@ -1,6 +1,55 @@
 version: "2"
 services:
 
+  producer:
+    container_name: producer
+    depends_on:
+        - kafka_broker_0
+        - kafka_broker_1
+        - kafka_broker_2
+    profiles: ["stream"]
+    build:
+      context: ../.
+      dockerfile: ./docker/Dockerfile_producer
+    env_file:
+      - config.env
+    environment:
+      - TWITTER_BEARER_TOKEN=${TWITTER_BEARER_TOKEN}
+
+  consumer:
+    container_name: consumer
+    depends_on:
+        - kafka_broker_0
+        - kafka_broker_1
+        - kafka_broker_2
+    profiles: ["stream"]
+    build:
+      context: ../.
+      dockerfile: ./docker/Dockerfile_consumer
+    restart: on-failure
+    env_file:
+      - config.env
+
+  dashboard:
+    container_name: dashboard
+    profiles: ["dashboard"]
+    build:
+      context: ../.
+      dockerfile: ./docker/Dockerfile_dashboard
+    restart: on-failure
+    depends_on:
+      - mongo
+    ports:
+      - 8501:8501
+    env_file:
+      - config.env
+    volumes:
+      - ../.:/home/user/pjt_final/happy-or-sad-tweet/
+    command: "streamlit run src/app.py"
+
+  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  # KAFKA
+  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   zookeeper:
     container_name: zookeeper
     image: confluentinc/cp-zookeeper:latest
@@ -17,13 +66,10 @@ services:
     profiles: ["stream"]
     depends_on:
       - zookeeper
-    ports:
-      - 9092:9092
-      - 29092:29092
     environment:
       KAFKA_BROKER_ID: 0
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka_broker_0:29092,PLAINTEXT_HOST://192.168.1.35:9092 #/!\ pas localhost
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka_broker_0:9092
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
       KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
@@ -34,13 +80,10 @@ services:
     profiles: ["stream"]
     depends_on:
       - zookeeper
-    ports:
-      - 9093:9093
-      - 29093:29093
     environment:
       KAFKA_BROKER_ID: 1
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka_broker_1:29093,PLAINTEXT_HOST://192.168.1.35:9093 #/!\ pas localhost
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka_broker_1:9092
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
       KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
@@ -51,39 +94,17 @@ services:
     profiles: ["stream"]
     depends_on:
       - zookeeper
-    ports:
-      - 9094:9094
-      - 29094:29094
     environment:
       KAFKA_BROKER_ID: 2
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka_broker_2:29094,PLAINTEXT_HOST://192.168.1.35:9094 #/!\ pas localhost
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka_broker_2:9092
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
       KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
 
-  producer:
-    container_name: producer
-    depends_on:
-        - kafka_broker_0
-        - kafka_broker_1
-        - kafka_broker_2
-    profiles: ["stream"]
-    build:
-      context: ../.
-      dockerfile: ./docker/Dockerfile_producer
-      
-  consumer:
-    container_name: consumer
-    depends_on:
-        - kafka_broker_0
-        - kafka_broker_1
-        - kafka_broker_2
-    profiles: ["stream"]
-    build:
-      context: ../.
-      dockerfile: ./docker/Dockerfile_consumer
-    restart: on-failure
+  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  # MONGO
+  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
   mongo:
     container_name: mongo
@@ -110,20 +131,9 @@ services:
       ME_CONFIG_MONGODB_ADMINPASSWORD: example
       ME_CONFIG_MONGODB_URL: mongodb://root:example@mongo:27017/
 
-  dashboard:
-    container_name: dashboard
-    profiles: ["dashboard"]
-    build:
-      context: ../.
-      dockerfile: ./docker/Dockerfile_dashboard
-    depends_on:
-      - mongo
-    ports:
-      - 8501:8501
-    restart: on-failure
-    volumes:
-      - ../.:/home/user/pjt_final/happy-or-sad-tweet/
-    command: "streamlit run src/app.py"
+  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  # SPARK
+  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
   spark:
     container_name: spark_master
