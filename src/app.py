@@ -127,8 +127,8 @@ def page_evolution_temporelle(state):
 
 def page_tfidf(state):
     st.title("MOTS CLES (TF-IDF)")
-
-    df['word'] = df['text'].apply(lambda x: x.split(" "))
+    df['word'] = df['text'].str.replace(r'[^\w\s]+', '')
+    df['word'] = df['word'].apply(lambda x: x.lower().split(" "))
     df_word = df[["word", "overall_feeling"]]
     df_word = df_word.explode('word')
     df_word = df_word[df_word['word'].str.contains("http") == False]
